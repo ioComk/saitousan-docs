@@ -35,6 +35,7 @@
 - [ADR-0016: 配信開始導線の最小PoCはホーム画面から中継開始設定画面到達までに限定する](0016-open-stream-setup-from-home-screen.md)
 - [ADR-0017: 初回起動とアカウント切り替えはOTP本体とは別の事前状態として扱う](0017-login-entry-and-account-switch-are-explicit-prelogin-states.md)
 - [ADR-0018: 同一アカウントの配信系ジョブは直列実行に制限する](0018-serialize-stream-jobs-per-account.md)
+- [ADR-0019: YouTubeのミラー元はLive Control Roomではなくwatch pageにする](0019-youtube-watch-page-over-live-control-room-capture.md)
 
 ## 運用ルール
 
