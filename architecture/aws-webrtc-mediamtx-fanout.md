@@ -191,3 +191,5 @@ Smartphone → mediaMTX → YouTube Live
 ```
 
 移行中はYouTube watch page経路を残し、mediaMTX経路がPhase Cまで通ってから主経路を切り替える。ADR-0019 / ADR-0020の知見はfallbackと比較基準として残す。
+
+実装と実測は本リポジトリ外で行い、Phase A手順は `research/phase-a-mediamtx-ingest-plan.md`、結果要約は `research/validation-log.md` に戻す。

@@ -220,13 +220,19 @@ Success criteria:
 
 ## Initial Implementation Boundary
 
-最初に作るものは、スマホ本番アプリでも管理UIでもなく、次に限定する。
+このリポジトリ（`saitousan-docs`）はドキュメント検討専用とする。実装コード、バイナリ、実行artifactは置かない。
+
+このリポジトリで残すもの:
 
 - `architecture/aws-webrtc-mediamtx-fanout.md` の構成メモ
-- EC2上mediaMTXの最小設定例（secretsなし）
-- Phase A/B用の検証手順メモ
+- `research/phase-a-mediamtx-ingest-plan.md` の Phase A 検証手順
+- 実測結果の要約を `research/validation-log.md` へ追記
 
-斉藤さんbridgeは既存PoCスクリプトを入力源差し替えで再利用する。YouTube watch page capture経路は、移行完了までfallbackとして残す。
+実装・実測の置き場:
+
+- mediaMTX 起動、WHIP publisher、計測ログは別リポジトリまたは EC2 作業ディレクトリで行う
+- 斉藤さん bridge は既存 PoC 資産を入力源差し替えで再利用する
+- YouTube watch page capture 経路は、移行完了まで fallback として残す
 
 ## Decision Triggers
 
@@ -251,4 +257,5 @@ Success criteria:
 - ADR-0020
 - `architecture/aws-youtube-to-saitousan-live.md`
 - `architecture/aws-webrtc-mediamtx-fanout.md`
+- `research/phase-a-mediamtx-ingest-plan.md`
 - Issue #6（一次配信元の再評価）

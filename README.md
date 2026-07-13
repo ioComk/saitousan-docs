@@ -4,10 +4,13 @@
 
 ## Contents
 - `research/`: 技術調査メモ
+  - `phase-a-mediamtx-ingest-plan.md`: ADR-0021 Phase A の検証手順（実装は別場所）
 - `adr/`: Architecture Decision Records
 - `architecture/`: 構成図とアーキテクチャメモ
   - `aws-youtube-to-saitousan-live.md`: 現行のYouTube一次配信構成
   - `aws-webrtc-mediamtx-fanout.md`: スマホWebRTC + mediaMTX fan-out案（ADR-0021）
+
+このリポジトリはドキュメント検討用。実装コードや実行artifactは扱わない。
 
 ## ADR Flow
 1. 課題や選択肢を整理する。
