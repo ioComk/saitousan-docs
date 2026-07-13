@@ -74,3 +74,10 @@ Success criteria:
 Issue: https://github.com/suzuki-engineering/saitousan-docs/issues/6
 
 このADRは、ADR-0002の検証範囲を不用意に拡張しないための境界記録である。
+
+2026-07時点の更新:
+
+- Androidカメラ注入の映像経路は短時間PoCとして成立した。
+- 一方でYouTube watch page起点のstall / bot / 画質変動が運用上の論点になっている。
+- 自前起点の再評価は [ADR-0021](0021-webrtc-mediamtx-owned-ingest-fanout.md) で開始する。
+- ADR-0021がAcceptedになった時点で、本ADRを `Superseded` に更新する。
