@@ -590,3 +590,113 @@ Remaining:
 - iPhone側での最終フレーミング微調整
 - 再生解像度の改善
 - 音声・長時間安定性は別途
+## 2026-07-09: Emulator 音声入力 Phase A / gRPC isolate
+
+Status: **更新** — gRPC `injectAudio` は MicHold latch 手順で guest mic まで到達。フレンド限定 LIVE で斉藤さん録音中（`silenced:false`、frames 増加）を確認。外部視聴の耳確認は手動。
+
+Goal:
+
+- Phase A: guest Android でマイク入力を確認（配信なし）→ **PASS（wav および gRPC）**
+- Phase B: フレンド限定 LIVE の外部視聴で YouTube 音声を確認 → guest 経路まで完了、耳確認は残
+
+Adopted gRPC path:
+
+```text
+PulseAudio yt_sink.monitor
+  -> scripts/13-emulator-grpc-audio-inject.mjs (MODE_REAL_TIME)
+  -> Emulator injectAudio (-audio none -allow-host-audio -grpc)
+  -> MicHold latch (RECREATE_MIC) then soft-stop / force-stop after app
+  -> guest Built-In Mic / 斉藤さん VOICE_COMMUNICATION
+```
+
+Crash root cause:
+
+- ゲスト mic 未オープン時 `virtio_snd_get_voice_in()` が NULL → `audio_forwarder_enable` SIGSEGV
+
+Evidence:
+
+- `artifacts/emulator-audio/grpc-clean-smoke-20260709T172245Z/`
+- `artifacts/youtube-emulator/20260709T173335Z/grpc-live-result.json`
+
+wav path remains available as fallback (`AUDIO_TRANSPORT=wav`).
+
+Next:
+
+1. 外部視聴端末で耳確認（フレンド限定・短時間）。
+2. LIVE 開始直後のマイク OFF→ON を自動化に組み込む（初回 open が無音になりやすい）。
+
+## 2026-07-19: EC2 iPhone音声経路の再検証
+
+Status: **Partial — Emulatorマイク入力 FAIL**
+
+Scope:
+
+- EC2 native構成
+- MediaMTX WHIP/RTSP
+- Android Emulator 36.6.11 / `saitosan_play_api36`
+- 実iPhoneではなく、合成WebRTC/RTSPトーンを使用
+- 配信開始なし
+
+Validation:
+
+- `whip-synthetic-test.py`でWHIP→MediaMTX RTSPを確認。WebRTC `connected`、RTSPはH.264 videoとOpus `48 kHz / 2ch` audioを返し、PASS。
+- `iphone-camera`へ1 kHzトーンをRTSP publishし、`mediamtx-to-emulator.sh`のPulseAudio仮想マイク monitorで`mean_volume=-24.1 dB`、`max_volume=-21.0 dB`を検出。MediaMTX→PulseAudioはPASS。
+- Emulator内の`MicHold`で`AudioRecord`を開いたが、トーン中もRMSは約`-92〜-93 dBFS`。Emulator→guest micはFAIL。
+
+Root cause / evidence:
+
+- `android-emulator.service`は`-audio pa -allow-host-audio`で起動中。
+- journalに`Could not init pa audio driver`、`Failed to initialize PA context`を確認。
+- Emulator gRPC `8554` listenerも未起動。
+- 現構成では音声がPulseAudioまでは届くが、EmulatorのPA backend境界で止まる。
+
+Cleanup:
+
+- 検証用`MicHold`を停止。
+- `mediamtx-native`、`mediamtx-virtual-camera`、`android-emulator`はactive。
+- repository code、systemd設定は変更なし。
+
+Next:
+
+1. `-audio pa`を使わず、既存PoCでPASS実績のあるgRPC `injectAudio`（`-audio none -grpc` + MicHold latch）またはwav fallbackへ切り替える。
+2. 切替後、実iPhoneのsenderでマイク許可を与え、`iphone-camera`のaudio trackとguest RMSを再確認する。
+
+## 2026-07-19: EC2 gRPC音声transport切替の実装・再検証
+
+Status: **Phase 0–1 PASS / 実iPhone・外部LIVE未実施**
+
+実施内容:
+
+- `android-emulator.service`を`-audio pa`から`-audio none -grpc 8554 -allow-host-audio`へ切替。
+- `emulator-audio-inject.service`とorchestratorを追加。Emulator boot → `hostmicon` → MicHold → gRPC injectorの順序を固定。
+- MediaMTX→PulseのRTSP検出がキーフレーム待ちで1.5秒タイムアウトしていたため、probe timeoutを8秒、RTSP read timeoutを5秒へ延長。
+- 無音PCMを先に`injectAudio`へ投入するとEmulator 36.6.11がSIGSEGVすることを再現。Pulse monitorが`-60 dBFS`を超えるまでgRPCを開始しない待機ゲートを追加。
+
+結果:
+
+- 無音時: `emulator-audio-inject.service`は`waiting_for_audio`で待機し、gRPC Node/ffmpegを起動しない。Emulator再起動後も`-audio none -grpc 8554`でactive。
+- 合成RTSP（testsrc2 + 1 kHz sine）: MediaMTX stream online（H.264 + Opus）、Pulse sink input成立、host PCM `-24.075 dBFS`、gRPC frames増加。
+- guest MicHold: `RECREATE_MIC`後にRMS `-7.1 dBFS`を観測。合成音声のguest mic到達はPASS。
+- 無音のままgRPCを開始した旧手順では、初回フレーム付近にEmulator `SIGSEGV`を確認。待機ゲート後の同一構成では再発なし。
+
+未実施:
+
+- 実iPhoneのマイク音声によるE2E。
+- 10分安定性、実Saitousanアプリのマイク入力、フレンド限定LIVE外部耳確認。
+- wav fallback / rollbackの実測。
+
+証跡:
+
+- `/var/lib/iphone-live-camera/audio-inject/orchestrator.state`
+- `/var/lib/iphone-live-camera/audio-inject/injector-state.json`
+- systemd journal: `android-emulator.service`, `emulator-audio-inject.service`, `mediamtx-virtual-camera.service`
+
+追加検証:
+
+- RTSP publisher終了時、keepalive追加前はPulseAudioが`memblock_replace_import()` assertionでABRTし、`mediamtx_camera` sinkが消失した。
+- `mediamtx-to-emulator.sh`へ`anullsrc`→`mediamtx_camera`の常時keepaliveを追加後、publisher終了から45秒後もPulseAudio、`mediamtx_camera` sink、monitor、audio sidecar、gRPC injectorがactive。injector framesは継続増加した。
+- 10分連続安定性は、keepalive修正後に改めて実施するため未完了。
+
+Security boundary:
+
+- Emulator gRPCは`*:8554`へbindする仕様だったため、`emulator-grpc-firewall.service`を追加し、IPv4/IPv6ともnon-loopbackのTCP/8554をREJECTする構成へ変更した。injector targetは`127.0.0.1:8554`のまま。
