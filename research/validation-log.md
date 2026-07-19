@@ -590,7 +590,6 @@ Remaining:
 - iPhone側での最終フレーミング微調整
 - 再生解像度の改善
 - 音声・長時間安定性は別途
-
 ## 2026-07-09: Emulator 音声入力 Phase A / gRPC isolate
 
 Status: **更新** — gRPC `injectAudio` は MicHold latch 手順で guest mic まで到達。フレンド限定 LIVE で斉藤さん録音中（`silenced:false`、frames 増加）を確認。外部視聴の耳確認は手動。
